@@ -119,11 +119,13 @@ jobs:
       - name: Apply launcher icons
         run: bash native-android/apply-icons.sh
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.3'
+
       - name: Build debug APK (Google test ads)
-        run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: gradle -p android assembleDebug
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
