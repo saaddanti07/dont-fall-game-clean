@@ -69,7 +69,7 @@ jobs:
 
           if len(candidates) != 1:
               print('Valid project roots found:', [str(p) for p in candidates])
-              sys.exit('Could not identify exactly one complete DON'T FALL project root.')
+              sys.exit("Could not identify exactly one complete DON'T FALL project root.")
 
           with open('/tmp/dont-fall-project-root', 'w') as f:
               f.write(str(candidates[0]))
