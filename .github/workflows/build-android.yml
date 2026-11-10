@@ -118,7 +118,16 @@ jobs:
 
       - name: Apply launcher icons
         run: bash native-android/apply-icons.sh
-
+      - name: Inspect Android Gradle configuration
+        run: |
+          echo "===== APP GRADLE ====="
+          if [ -f android/app/build.gradle ]; then
+            cat android/app/build.gradle
+          elif [ -f android/app/build.gradle.kts ]; then
+            cat android/app/build.gradle.kts
+          else
+            echo "Gradle file not found"
+          fi
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
