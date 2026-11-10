@@ -96,7 +96,15 @@ jobs:
           test -f capacitor.config.ts
           test -d src
           test -f native-android/MainActivity.kt
-
+      - name: Search rewarded ads and button handlers
+        run: |
+          echo "===== AD AND REWARDED REFERENCES ====="
+          grep -RInEi \
+            --exclude-dir=node_modules \
+            --exclude-dir=.git \
+            --exclude='*.map' \
+            'rewarded|admob|show.*ad|revive|double.*coin|double.*reward|watch.*ad' \
+            src native-android package.json || true
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
