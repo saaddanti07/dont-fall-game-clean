@@ -151,23 +151,25 @@ jobs:
           python3 - <<'PY'
           import os
           import base64
+          import re
 
-          lines = os.environ["KEYSTORE_B64"].strip().splitlines()
-          if lines and lines[0].startswith("-----BEGIN "):
-              lines = lines[1:]
-          if lines and lines[-1].startswith("-----END "):
-              lines = lines[:-1]
+          raw = os.environ["KEYSTORE_B64"]
+          cleaned = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
 
-          data = base64.b64decode("".join(lines))
-          path = "android/app/dont-fall-release.jks"
+          if not cleaned:
+              raise SystemExit("Keystore secret is empty.")
 
-          with open(path, "wb") as f:
+          data = base64.b64decode(cleaned, validate=True)
+
+          if not data:
+              raise SystemExit("Decoded keystore is empty.")
+
+          with open("android/app/dont-fall-release.jks", "wb") as f:
               f.write(data)
 
           print("Signing key decoded successfully.")
           PY
           echo "ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/android/app/dont-fall-release.jks" >> "$GITHUB_ENV"
-
       - name: Build debug APK (TEST)
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_mode == 'test' }}
         run: gradle -p android assembleDebug
