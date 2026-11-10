@@ -141,12 +141,12 @@ jobs:
           else
             echo "Gradle file not found"
           fi
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
+           - name: Setup Gradle
+              uses: gradle/actions/setup-gradle@v4
+               with:
           gradle-version: '8.14.3'
 
-         - name: Decode Android signing key
+      - name: Decode Android signing key
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mode == 'release' }}
         shell: bash
         env:
@@ -180,7 +180,7 @@ jobs:
       - name: Build signed release APK
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mode == 'release' }}
         env:
-          ANDROID_KEYSTORE_PATH: ${{ env.ANDROID_KEYSTORE_PATH }}
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/android/app/dont-fall-release.jks
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
