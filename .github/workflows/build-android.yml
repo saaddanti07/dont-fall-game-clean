@@ -7,6 +7,15 @@ on:
       - 'dont-fall-source.txt'
       - '.github/workflows/build-android.yml'
   workflow_dispatch:
+    inputs:
+      build_mode:
+        description: 'Choose TEST or RELEASE'
+        required: true
+        default: 'test'
+        type: choice
+        options:
+          - test
+          - release
 
 permissions:
   contents: read
@@ -15,8 +24,9 @@ jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
+    
     env:
-      VITE_ADMOB_ENV: development
+      VITE_ADMOB_ENV: ${{ github.event.inputs.build_mode == 'release' && 'production' || 'development' }}
 
     steps:
       - name: Checkout repository
