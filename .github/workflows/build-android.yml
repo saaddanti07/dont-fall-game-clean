@@ -24,9 +24,8 @@ jobs:
   build-apk:
     name: Build Android APK
     runs-on: ubuntu-latest
-    
     env:
-      VITE_ADMOB_ENV: ${{ github.event.inputs.build_mode == 'release' && 'production' || 'development' }}
+      VITE_ADMOB_ENV: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mode == 'release' && 'production' || 'development' }}
 
     steps:
       - name: Checkout repository
@@ -51,6 +50,7 @@ jobs:
 
           archive = Path('dont-fall-source.zip')
           temp = Path(tempfile.mkdtemp(prefix='dont-fall-'))
+
           with zipfile.ZipFile(archive) as z:
               for item in z.infolist():
                   p = PurePosixPath(item.filename)
@@ -105,10 +105,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
       - name: Inspect AdMob environment usage
         run: |
           echo "===== ADMOB ENVIRONMENT REFERENCES ====="
           grep -RIn --exclude-dir=node_modules --exclude-dir=.git --exclude='*.map' 'VITE_ADMOB_ENV' . || true
+
       - name: Build web game
         run: npm run build
 
@@ -131,6 +133,7 @@ jobs:
 
       - name: Apply launcher icons
         run: bash native-android/apply-icons.sh
+
       - name: Inspect Android Gradle configuration
         run: |
           echo "===== APP GRADLE ====="
@@ -146,30 +149,47 @@ jobs:
         shell: bash
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           mkdir -p android/app
           python3 - <<'PY'
           import os
           import base64
-          import re
 
-          raw = os.environ["KEYSTORE_B64"]
-          cleaned = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
+          raw = os.environ.get("KEYSTORE_B64", "")
+          lines = raw.strip().splitlines()
+          body = []
 
-          if not cleaned:
-              raise SystemExit("Keystore secret is empty.")
+          for line in lines:
+              line = line.strip().lstrip("\ufeff")
+              if not line:
+                  continue
+              if line.startswith("-----BEGIN ") or line.startswith("-----END "):
+                  continue
+              body.append(line)
 
-          data = base64.b64decode(cleaned, validate=True)
+          encoded = "".join(body)
+          if not encoded or len(encoded) % 4 != 0:
+              raise SystemExit("Invalid Base64 length in ANDROID_KEYSTORE_BASE64.")
+
+          try:
+              data = base64.b64decode(encoded, validate=True)
+          except Exception:
+              raise SystemExit("ANDROID_KEYSTORE_BASE64 is not valid Base64. Replace the GitHub secret with only the Base64 text between the BEGIN and END lines.")
 
           if not data:
               raise SystemExit("Decoded keystore is empty.")
 
-          with open("android/app/dont-fall-release.jks", "wb") as f:
+          path = "android/app/dont-fall-release.jks"
+          with open(path, "wb") as f:
               f.write(data)
 
-          print("Signing key decoded successfully.")
+          print("Signing key decoded. Checking keystore...")
           PY
+          keytool -list -keystore android/app/dont-fall-release.jks -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null
           echo "ANDROID_KEYSTORE_PATH=$GITHUB_WORKSPACE/android/app/dont-fall-release.jks" >> "$GITHUB_ENV"
+
       - name: Build debug APK (TEST)
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.build_mode == 'test' }}
         run: gradle -p android assembleDebug
