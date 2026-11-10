@@ -95,7 +95,10 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
+      - name: Inspect AdMob environment usage
+        run: |
+          echo "===== ADMOB ENVIRONMENT REFERENCES ====="
+          grep -RIn --exclude-dir=node_modules --exclude-dir=.git --exclude='*.map' 'VITE_ADMOB_ENV' . || true
       - name: Build web game
         run: npm run build
 
