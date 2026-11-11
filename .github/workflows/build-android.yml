@@ -105,6 +105,15 @@ jobs:
             --exclude='*.map' \
             'rewarded|admob|show.*ad|revive|double.*coin|double.*reward|watch.*ad' \
             src native-android package.json || true
+
+      - name: Inspect rewarded ad implementation
+        run: |
+          echo "===== ADS SERVICE ====="
+          sed -n '1,330p' src/game/ads.ts
+          echo "===== APP REWARDED HANDLERS ====="
+          sed -n '100,165p' src/App.tsx
+          echo "===== GAME OVER BUTTONS ====="
+          sed -n '90,120p' src/components/GameOver.tsx
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
