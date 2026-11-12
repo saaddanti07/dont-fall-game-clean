@@ -287,6 +287,9 @@ jobs:
                 reward = await ads.showRewarded("coins");
               } finally {
                 audio.resumeAfterAd();
+                // The game-over screen keeps the engine mounted; restart its RAF loop
+                // after the rewarded ad releases the WebView surface.
+                gameRef.current?.setPaused(false);
                 setAdBusy(false);
               }"""
           if s.count(old_coins) != 1:
