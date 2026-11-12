@@ -120,6 +120,18 @@ jobs:
           print("Patched src/game/ads.ts: removed immediate rewarded-ad preload.")
           PY
 
+      - name: Inspect gameplay audio and animation lifecycle
+        shell: bash
+        run: |
+          echo "===== GAME AUDIO MODULE ====="
+          sed -n '1,300p' src/game/audio.ts
+          echo "===== GAME SCREEN LIFECYCLE ====="
+          sed -n '1,300p' src/components/GameScreen.tsx
+          echo "===== ENGINE LOOP AND AUDIO REFERENCES ====="
+          grep -n -C 5 -E 'requestAnimationFrame|cancelAnimationFrame|setInterval|clearInterval|visibilitychange|audio\\.|sfx\\(|music|loop' src/game/engine.ts || true
+          echo "===== APP AUDIO AND AD HANDLERS ====="
+          sed -n '1,175p' src/App.tsx
+
       - name: Search rewarded ads and button handlers
         run: |
           echo "===== AD AND REWARDED REFERENCES ====="
