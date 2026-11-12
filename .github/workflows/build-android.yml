@@ -143,8 +143,8 @@ jobs:
           path = Path("src/App.tsx")
           source = path.read_text(encoding="utf-8")
           old = """        if (!adsState.current.reviveUsed) {
-                  void ads.prepareRewarded("revive");
-                }
+          void ads.prepareRewarded("revive");
+        }
           """
           if source.count(old) != 1:
               raise SystemExit("Expected exactly one game-over revive preload; refusing unsafe patch")
