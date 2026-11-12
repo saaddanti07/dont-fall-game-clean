@@ -104,18 +104,19 @@ jobs:
           from pathlib import Path
 
           path = Path("src/game/ads.ts")
-          source = path.read_text(encoding="utf-8")
-          old = "      void this.prepareRewarded(kind);\\n      return outcome;"
-          new = (
-              "      // Prepare the next rewarded ad only when the player requests it.\\n"
-              "      // Avoid starting another native ad load while gameplay is resuming.\\n"
-              "      return outcome;"
-          )
+          lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+          matches = [
+              i for i, line in enumerate(lines)
+              if line.strip() == "void this.prepareRewarded(kind);"
+          ]
 
-          if source.count(old) != 1:
-              raise SystemExit("Expected rewarded-ad preload call was not found exactly once; refusing to patch.")
+          if len(matches) != 1:
+              raise SystemExit(
+                  "Expected exactly one immediate rewarded-ad preload call; refusing to patch."
+              )
 
-          path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          del lines[matches[0]]
+          path.write_text("".join(lines), encoding="utf-8")
           print("Patched src/game/ads.ts: removed immediate rewarded-ad preload.")
           PY
 
