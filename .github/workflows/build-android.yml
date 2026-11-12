@@ -97,6 +97,20 @@ jobs:
           test -d src
           test -f native-android/MainActivity.kt
 
+      - name: Inspect Canvas and Android WebView rendering lifecycle
+        shell: bash
+        run: |
+          echo "===== CANVAS / RENDERER / LIFECYCLE REFERENCES ====="
+          grep -RIn -C 10 --exclude-dir=node_modules --exclude-dir=.git --exclude='*.map' -E 'getContext|contextlost|contextrestored|webglcontext|HTMLCanvasElement|canvas\.|requestAnimationFrame|cancelAnimationFrame|visibilitychange|appStateChange|onResume|onPause|onWindowFocusChanged|devicePixelRatio|ResizeObserver|setPaused|resume\(' src native-android android 2>/dev/null || true
+          echo "===== GAME ENGINE SOURCE ====="
+          sed -n '1,360p' src/game/engine.ts
+          echo "===== GAME SCREEN SOURCE ====="
+          sed -n '1,280p' src/components/GameScreen.tsx
+          echo "===== ANDROID MAIN ACTIVITY ====="
+          sed -n '1,300p' native-android/MainActivity.kt
+          echo "===== ADS LIFECYCLE CALLBACKS ====="
+          grep -n -C 12 -E 'showRewarded|onAdDismissed|onAdFailedToShow|onRewarded|prepareRewarded|removeAllListeners|visibilitychange' src/game/ads.ts src/App.tsx || true
+
       - name: Avoid rewarded-ad preload during gameplay resume
         shell: bash
         run: |
