@@ -134,6 +134,26 @@ jobs:
           print("Patched src/game/ads.ts: removed immediate rewarded-ad preload.")
           PY
 
+      - name: Defer revive-ad loading until the player requests it
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/App.tsx")
+          source = path.read_text(encoding="utf-8")
+          old = """        if (!adsState.current.reviveUsed) {
+                  void ads.prepareRewarded("revive");
+                }
+          """
+          if source.count(old) != 1:
+              raise SystemExit("Expected exactly one game-over revive preload; refusing unsafe patch")
+          source = source.replace(old, "", 1)
+          path.write_text(source, encoding="utf-8")
+          print("Removed automatic revive-ad preload from game-over transition.")
+          print("Revive ads will now load only after the player taps the revive button.")
+          PY
+
       - name: Inspect gameplay audio and animation lifecycle
         shell: bash
         run: |
