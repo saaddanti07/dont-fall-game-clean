@@ -161,7 +161,7 @@ jobs:
           s = engine.read_text()
           import re
           pattern = re.compile(
-              r"(?ms)^  start\\(\\) \\{\\n.*?^  setPaused\\(p: boolean\\) \\{\\n.*?^  \\}"
+              r"(?ms)^  start[(][)] [{]\n.*?^  setPaused[(]p: boolean[)] [{]\n.*?^  [}]"
           )
           replacement = """  private running = false;
             private loop = (now: number) => {
