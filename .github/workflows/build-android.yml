@@ -178,7 +178,7 @@ jobs:
           
             setPaused(p: boolean) {
               this.paused = p;
-  }"""
+          }"""
           new = """  private running = false;
             private loop = (now: number) => {
               if (!this.running || this.paused) return;
