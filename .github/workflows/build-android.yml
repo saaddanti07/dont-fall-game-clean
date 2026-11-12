@@ -317,6 +317,7 @@ jobs:
             lastFrame: number;
             mark: (phase: string) => void;
             tick: (now: number) => void;
+            report: (now: number, reason: string) => void;
           };
 
           const root = globalThis as any;
@@ -386,7 +387,7 @@ jobs:
           source = app.read_text(encoding="utf-8")
           if 'from "./game/ad-performance-diagnostics"' in source:
               raise SystemExit("FPS diagnostics import already exists; refusing duplicate patch")
-          source = 'import { markAdPerformancePhase } from "./game/ad-performance-diagnostics";\\n' + source
+          source = 'import { markAdPerformancePhase } from "./game/ad-performance-diagnostics";\n' + source
 
           def patch_handler(text, start_token, end_token, label):
               start = text.find(start_token)
@@ -399,11 +400,11 @@ jobs:
               before = "setAdBusy(true);"
               if section.count(before) != 1:
                   raise SystemExit("Expected one ad-busy start in " + label)
-              section = section.replace(before, before + '\\n    markAdPerformancePhase("' + label + '-before");', 1)
+              section = section.replace(before, before + '\n    markAdPerformancePhase("' + label + '-before");', 1)
               after = "audio.resumeAfterAd();"
               if section.count(after) != 1:
                   raise SystemExit("Expected one audio resume point in " + label)
-              section = section.replace(after, after + '\\n        markAdPerformancePhase("' + label + '-closed");', 1)
+              section = section.replace(after, after + '\n        markAdPerformancePhase("' + label + '-closed");', 1)
               return text[:start] + section + text[end:]
 
           source = patch_handler(
