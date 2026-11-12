@@ -131,6 +131,15 @@ jobs:
           grep -n -C 5 -E 'requestAnimationFrame|cancelAnimationFrame|setInterval|clearInterval|visibilitychange|audio\\.|sfx\\(|music|loop' src/game/engine.ts || true
           echo "===== APP AUDIO AND AD HANDLERS ====="
           sed -n '1,175p' src/App.tsx
+          echo "===== AUDIO ENGINE CONTROL METHODS ====="
+          grep -n -C 8 -E 'timer|syncMusic|setInterval|clearInterval|suspend|resume|musicOn|sfxOn|export' src/game/audio.ts
+          echo "===== AUDIO ENGINE END ====="
+          sed -n '300,520p' src/game/audio.ts
+          echo "===== GAME ENGINE LOOP / PAUSE ====="
+          grep -n -C 12 -E 'requestAnimationFrame|setInterval|clearInterval|setPaused|paused|loop\(' src/game/engine.ts
+          echo "===== GAME SCREEN APP STATE / LIFECYCLE ====="
+          sed -n '55,180p' src/components/GameScreen.tsx
+
 
       - name: Search rewarded ads and button handlers
         run: |
