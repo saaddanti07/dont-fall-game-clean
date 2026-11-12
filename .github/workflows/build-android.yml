@@ -151,6 +151,152 @@ jobs:
             'rewarded|admob|show.*ad|revive|double.*coin|double.*reward|watch.*ad' \
             src native-android package.json || true
 
+      - name: Fix paused game rendering and suspend audio during rewarded ads
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          engine = Path("src/game/engine.ts")
+          s = engine.read_text()
+          old = """  start() {
+              this.last = performance.now();
+              const loop = (now: number) => {
+                const dt = Math.min(0.033, (now - this.last) / 1000);
+                this.last = now;
+                if (!this.paused && this.state !== "over") this.update(dt);
+                this.time += this.paused ? 0 : dt;
+                this.render();
+                this.raf = requestAnimationFrame(loop);
+              };
+              this.raf = requestAnimationFrame(loop);
+            }
+
+            destroy() {
+              cancelAnimationFrame(this.raf);
+            }
+
+            setPaused(p: boolean) {
+              this.paused = p;
+            }"""
+          new = """  private running = false;
+            private loop = (now: number) => {
+              if (!this.running || this.paused) return;
+              const dt = Math.min(0.033, (now - this.last) / 1000);
+              this.last = now;
+              if (this.state !== "over") this.update(dt);
+              this.time += dt;
+              this.render();
+              if (this.running && !this.paused) this.raf = requestAnimationFrame(this.loop);
+            };
+
+            start() {
+              if (this.running) return;
+              this.running = true;
+              this.last = performance.now();
+              this.raf = requestAnimationFrame(this.loop);
+            }
+
+            destroy() {
+              this.running = false;
+              cancelAnimationFrame(this.raf);
+            }
+
+            setPaused(p: boolean) {
+              if (this.paused === p) return;
+              this.paused = p;
+              if (p) {
+                cancelAnimationFrame(this.raf);
+                this.render();
+              } else if (this.running) {
+                this.last = performance.now();
+                this.raf = requestAnimationFrame(this.loop);
+              }
+            }"""
+          if old not in s:
+              raise SystemExit("Game engine loop block did not match exactly; refusing unsafe patch")
+          engine.write_text(s.replace(old, new, 1))
+
+          audio = Path("src/game/audio.ts")
+          s = audio.read_text()
+          anchor = "  configure(s: { musicOn: boolean; sfxOn: boolean; musicVol: number; sfxVol: number }) {"
+          methods = """  /** Stop game audio scheduling while a native rewarded ad owns audio focus. */
+            pauseForAd() {
+              if (this.timer !== null) {
+                clearInterval(this.timer);
+                this.timer = null;
+              }
+              if (this.ctx?.state === "running") void this.ctx.suspend();
+            }
+
+            /** Resume the existing audio context without changing the player's sound settings. */
+            resumeAfterAd() {
+              const ctx = this.ctx;
+              if (!ctx) return;
+              const resume = ctx.state === "suspended" ? ctx.resume() : Promise.resolve();
+              void resume.then(() => {
+                if (this.ctx !== ctx) return;
+                this.nextTime = ctx.currentTime + 0.05;
+                this.syncMusic();
+              }).catch(() => {
+                // Audio can remain unavailable until the next user gesture on some devices.
+              });
+            }
+
+          """
+          if s.count(anchor) != 1:
+              raise SystemExit("Audio configure anchor missing or duplicated; refusing unsafe patch")
+          audio.write_text(s.replace(anchor, methods + anchor, 1))
+
+          app = Path("src/App.tsx")
+          s = app.read_text()
+          old_revive = """    setAdBusy(true);
+              const reward = await ads.showRewarded("revive");
+              setAdBusy(false);"""
+          new_revive = """    setAdBusy(true);
+              gameRef.current.setPaused(true);
+              audio.pauseForAd();
+              let reward: Awaited<ReturnType<typeof ads.showRewarded>> = null;
+              try {
+                reward = await ads.showRewarded("revive");
+              } finally {
+                audio.resumeAfterAd();
+                setAdBusy(false);
+              }"""
+          if s.count(old_revive) != 1:
+              raise SystemExit("Revive ad call did not match exactly; refusing unsafe patch")
+          s = s.replace(old_revive, new_revive, 1)
+          old_resume = """      setScreen("playing");
+              }
+            }, [adBusy, screen, pushToasts]);"""
+          new_resume = """      setScreen("playing");
+                  gameRef.current.setPaused(false);
+              }
+            }, [adBusy, screen, pushToasts]);"""
+          if s.count(old_resume) != 1:
+              raise SystemExit("Revive resume point did not match exactly; refusing unsafe patch")
+          s = s.replace(old_resume, new_resume, 1)
+
+          old_coins = """    setAdBusy(true);
+              const reward = await ads.showRewarded("coins");
+              setAdBusy(false);"""
+          new_coins = """    setAdBusy(true);
+              gameRef.current?.setPaused(true);
+              audio.pauseForAd();
+              let reward: Awaited<ReturnType<typeof ads.showRewarded>> = null;
+              try {
+                reward = await ads.showRewarded("coins");
+              } finally {
+                audio.resumeAfterAd();
+                setAdBusy(false);
+              }"""
+          if s.count(old_coins) != 1:
+              raise SystemExit("Double-coins ad call did not match exactly; refusing unsafe patch")
+          app.write_text(s.replace(old_coins, new_coins, 1))
+          print("Patched game RAF pause/resume and rewarded-ad audio lifecycle.")
+          PY
+          npx tsc --noEmit
+
       - name: Inspect rewarded ad implementation
         run: |
           echo "===== ADS SERVICE ====="
