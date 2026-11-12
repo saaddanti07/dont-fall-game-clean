@@ -425,3 +425,5 @@ jobs:
           name: dont-fall-release-apk
           path: android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+# Rebuild trigger: retry Android APK build after run 57 could not be retried.
